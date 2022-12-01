@@ -1,9 +1,8 @@
 const express = require("express");
 const app = express();
-const { userRouter } = require("./routes/userRoute");
-const { blogRouter } = require("./routes/blogRoute");
+const { userRouter, blogRouter } = require("./routes");
 const { mongoose } = require("mongoose");
-
+const { commentRouter } = require("./routes/commentRoute");
 const MONGO_URI =
   "mongodb+srv://admin:qwer1234@cluster0.nn1apzs.mongodb.net/BlogService?retryWrites=true&w=majority";
 
