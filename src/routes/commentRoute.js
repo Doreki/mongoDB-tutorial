@@ -1,5 +1,4 @@
 const { Router } = require("express");
-import { Param } from "@nestjs/common";
 const commentRouter = Router({ mergeParams: true });
 const { Comment, Blog, User } = require("../models");
 const { isValidObjectId } = require("mongoose");
