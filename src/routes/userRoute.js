@@ -1,6 +1,6 @@
 const { Router } = require("express");
 const userRouter = Router();
-const { User } = require("../models");
+const { User, Blog } = require("../models");
 const mongoose = require("mongoose");
 
 userRouter.get("/", async (req, res) => {
@@ -48,7 +48,16 @@ userRouter.delete("/:userId", async (req, res) => {
     const { userId } = req.params;
     if (!mongoose.isValidObjectId(userId))
       return res.status(400).send({ err: "Invalid userId" });
-    const user = await User.findOneAndDelete({ _id: userId });
+    const [user] = await Promise.all([
+      User.findOneAndDelete({ _id: userId }),
+      Blog.deleteMany({ "user._id": userId }),
+      Blog.updateMnay(
+        { "comments.user": userId },
+        { $pull: { commnts: { user: userId } } }
+      ),
+      Comment.deleteMany({ user: userId }),
+    ]);
+
     return res.send({ user });
   } catch (err) {
     console.log(err);
@@ -85,7 +94,17 @@ userRouter.put("/:userId", async (req, res) => {
     let user = await User.findById(userId);
     console.log({ userBeforeEdit: user });
     if (age) user.age = age;
-    if (name) user.name = name;
+    if (name) {
+      user.name = name;
+      await Promise.all([
+        Blog.updateMany({ "user._id": userId }, { "user.name": name }),
+        Blog.updateMany(
+          {},
+          { "comments.$[comment].userFullName": `${name.first} ${name.last}` },
+          { arrayFilters: [{ "comment.user": userId }] }
+        ),
+      ]);
+    }
     await user.save();
     console.log({ userAfterEdit: user });
     return res.send({ user });
