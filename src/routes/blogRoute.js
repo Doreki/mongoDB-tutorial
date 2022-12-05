@@ -31,7 +31,7 @@ blogRouter.post("/", async (req, res) => {
 
 blogRouter.get("/", async (req, res) => {
   try {
-    let { page } = req.query;
+    let { page = 0 } = req.query;
     page = parseInt(page);
     console.log({ page });
     const blogs = await Blog.find({})
@@ -57,7 +57,9 @@ blogRouter.get("/:blogId", async (req, res) => {
     let user = await User.findById(blogId);
 
     const blog = await Blog.findOne({ _id: blogId });
-    return res.send({ blog });
+    // const commentCount = await Comment.find({ blog: blogId }).countDocuments();
+   
+    return res.send({ blog, commentCount });
   } catch (err) {
     console.log(err);
     res.status(500).send({ err: err.message });
