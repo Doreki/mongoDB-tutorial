@@ -1,10 +1,13 @@
 const { Router } = require("express");
 const commentRouter = Router({ mergeParams: true });
 const { Comment, Blog, User } = require("../models");
-const { isValidObjectId } = require("mongoose");
+const { isValidObjectId, startSession } = require("mongoose");
 
 commentRouter.post("/:commentId", async (req, res) => {
+  const session = await startSession();
+  let comment;
   try {
+    // await session.withTransaction(async () => {
     const { blogId } = req.params;
     const { content, userId } = req.body;
     if (!isValidObjectId(blogId))
@@ -15,35 +18,50 @@ commentRouter.post("/:commentId", async (req, res) => {
       return res.status(400).send({ err: "content is required" });
 
     const [blog, user] = await Promise.all([
-      Blog.findById(blogId),
-      User.findById(userId),
+      Blog.findById(blogId, {}, {}),
+      User.findById(userId, {}, {}),
     ]);
 
     if (!blog || !user)
       res.status(400).send({ err: "blog or user dose not exist" });
     if (!blog.isLive)
       return res.status(400).send({ err: "blog is not available" });
-    const comment = new Comment({
+    comment = new Comment({
       content,
       user,
       userFullName: `${user.name.first} ${user.name.last}`,
       blog: blogId,
     });
+    // await session.abortTransaction();
     // await Promise.all([
     //   comment.save(),
     //   Blog.updateOne({ _id: blogId }, { $push: { comments: comment } }),
     // ]);
-    blog.commentsCount++;
-    blog.comments.push(comment);
-    if (blog.commentsCount > 3) blog.comments.shift();
+    //   blog.commentsCount++;
+    //   blog.comments.push(comment);
+    //   if (blog.commentsCount > 3) blog.comments.shift();
+    //   await Promise.all([
+    //     comment.save({}),
+    //     blog.save(),
+    //     // Blog.updateOne({ _id: blogId }, { $inc: { commentsCount: 1 } }),
+    //   ]);
+    // });
+
     await Promise.all([
       comment.save(),
-      blog.save(),
-      // Blog.updateOne({ _id: blogId }, { $inc: { commentsCount: 1 } }),
+      Blog.updateOne(
+        { _id: blogId },
+        {
+          $inc: { commentsCount: 1 },
+          $push: { comments: { $each: [comment], $slice: -3 } },
+        }
+      ),
     ]);
     return res.send({ comment });
   } catch (err) {
     return res.status(400).send({ err: err.message });
+  } finally {
+    await session.endSession();
   }
 });
 
