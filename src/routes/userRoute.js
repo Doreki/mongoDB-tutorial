@@ -51,7 +51,7 @@ userRouter.delete("/:userId", async (req, res) => {
     const [user] = await Promise.all([
       User.findOneAndDelete({ _id: userId }),
       Blog.deleteMany({ "user._id": userId }),
-      Blog.updateMnay(
+      Blog.updateMany(
         { "comments.user": userId },
         { $pull: { commnts: { user: userId } } }
       ),
